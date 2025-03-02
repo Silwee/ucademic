@@ -3,9 +3,9 @@ Backend cho dự án Ucademic - Web học online
 
 
 ## Công nghệ
-Dự án sử dụng [FastAPI](fastapi.tiangolo.com) - framework cho ứng dụng web trên Python
+Dự án sử dụng [FastAPI](https://fastapi.tiangolo.com) - framework cho ứng dụng web trên Python
 
-Cơ sở dữ liệu sử dụng [SQLite3](www.sqlite.org) và mapping bằng [SQLModel](sqlmodel.tiangolo.com)
+Cơ sở dữ liệu sử dụng [SQLite3](https://www.sqlite.org) và mapping bằng [SQLModel](https://sqlmodel.tiangolo.com)
 
 
 ## Cài đặt
