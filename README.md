@@ -4,7 +4,7 @@ Backend cho dự án Ucademic - Web học online
 
 ## Cài đặt
 Yêu cầu cài đặt: Python 3.10+
-- Bước 1: Clone repository về máy, mở folder trong VSCode rồi mở Terminal
+- Bước 1: Clone repository về máy, mở folder trong IDE (VSCode, PyCharm,...) rồi mở Terminal
 - Bước 2: Tạo 1 virtual enviroment mới: `python -m venv .venv`
 - Bước 3: Activate virtual enviroment vừa tạo:
   - Với Windows:
