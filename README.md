@@ -2,6 +2,12 @@
 Backend cho dự án Ucademic - Web học online
 
 
+## Công nghệ
+Dự án sử dụng [FastAPI](fastapi.tiangolo.com) - framework cho ứng dụng web trên Python
+
+Cơ sở dữ liệu sử dụng [SQLite3](www.sqlite.org) và mapping bằng [SQLModel](sqlmodel.tiangolo.com)
+
+
 ## Cài đặt
 Yêu cầu cài đặt: Python 3.10+
 - Bước 1: Clone repository về máy, mở folder trong IDE (VSCode, PyCharm,...) rồi mở Terminal
