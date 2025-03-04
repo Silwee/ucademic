@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from pydantic import BaseModel
 
-from auth.data import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from auth.auth_const import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 class Token(BaseModel):

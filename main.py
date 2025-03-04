@@ -28,7 +28,7 @@ app.add_middleware(
 )
 
 
-@app.post("/register", response_model=UserResponse)
+@app.post("/register", response_model=Token)
 async def register(user_create: UserCreate):
     user_existed_exception = HTTPException(
         status_code=status.HTTP_409_CONFLICT,
@@ -42,8 +42,8 @@ async def register(user_create: UserCreate):
         db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
         session.add(db_user)
         session.commit()
-        session.refresh(db_user)
-        return db_user
+    access_token = create_access_token(data={"sub": db_user.email})
+    return Token(access_token=access_token, token_type="bearer")
 
 
 @app.post("/login", response_model=Token)

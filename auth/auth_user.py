@@ -6,7 +6,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt import InvalidTokenError
 from sqlmodel import Session, select
 
-from auth.data import SECRET_KEY, ALGORITHM
+from auth.auth_const import SECRET_KEY, ALGORITHM
 from auth.password import verify_password
 from models import User
 from models.User import User
