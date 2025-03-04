@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from auth.auth_const import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
-class Token(BaseModel):
+class AccessToken(BaseModel):
     access_token: str
     token_type: str
 
