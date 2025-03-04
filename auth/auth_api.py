@@ -26,6 +26,7 @@ async def register(user_create: UserCreate):
         db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
         session.add(db_user)
         session.commit()
+        session.refresh(db_user)
     access_token = create_access_token(data={"sub": db_user.email})
     return AccessToken(access_token=access_token, token_type="bearer")
 
