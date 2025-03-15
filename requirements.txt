@@ -3,3 +3,4 @@ passlib[bcrypt]
 pydantic
 PyJWT
 sqlmodel
+alembic

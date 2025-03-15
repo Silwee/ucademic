@@ -3,30 +3,69 @@ Backend cho dự án Ucademic - Web học online
 
 
 ## Công nghệ
-Dự án sử dụng [FastAPI](https://fastapi.tiangolo.com) - framework cho ứng dụng web trên Python
-
-Cơ sở dữ liệu sử dụng [SQLite3](https://www.sqlite.org) và mapping bằng [SQLModel](https://sqlmodel.tiangolo.com)
+- [FastAPI](https://fastapi.tiangolo.com) - Framework cho ứng dụng web trên Python
+- [SQLite3](https://www.sqlite.org) - Database 
+- [SQLModel](https://sqlmodel.tiangolo.com) - ORM
+- [Alembic](https://alembic.sqlalchemy.org/) - Database migration
 
 
 ## Cài đặt
-Yêu cầu cài đặt: Python 3.10+
-- Bước 1: Clone repository về máy, mở folder trong IDE (VSCode, PyCharm,...) rồi mở Terminal
-- Bước 2: Tạo 1 virtual enviroment mới: `python -m venv .venv`
-- Bước 3: Activate virtual enviroment vừa tạo:
-  - Với Windows:
-    - `Set-ExecutionPolicy Unrestricted -Scope Process`
-    - `.venv\Scripts\Activate.ps1`
-  - Với Linux/macOS:
-    - `source .venv/bin/activate`
-  - Có thể kiểm tra virtual enviroment đã active chưa bằng lệnh sau (Nếu đường dẫn trả về nằm trong thư mục hiện tại thì thành công):
-    - Window: `Get-Command python`
-    - Linux/macOS: `which python`
-- Bước 4: Cập nhật pip: `python -m pip install --upgrade pip`
-- Bước 5 (Optional): Thêm .gitignore cho venv: `echo "*" > .venv/.gitignore`
-- Bước 6: Cài đặt các thư viện cần thiết: `pip install -r requirements.txt`
+Yêu cầu cài đặt: Python 3.10+ 
+
+
+```shell
+git clone https://github.com/Silwee/ucademic.git
+cd ucademic
+python -m venv .venv
+```
+
+Tiếp theo [Activate virtual environment](#Activate-virtual-environment)
+
+Cài đặt các thư viện cần thiết
+
+```
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+> [!NOTE]
+> Nếu gặp phải FastAPIError hoặc bất kỳ lỗi nào khác khi khởi chạy server, 
+thử chạy lại `pip install -r requirements.txt` trong terminal.
 
 
 ## Run
-Sử dụng lệnh `fastapi dev main.py` để khởi chạy server. Server sẽ chạy trên http://localhost:8000
+### Activate virtual environment
+Chạy mỗi khi mở terminal mới. Bỏ que nếu terminal đã kích hoạt venv (hiển thị (.venv) trước mỗi dòng lệnh)
+- Windows Powershell
+
+  ```shell
+  Set-ExecutionPolicy Unrestricted -Scope Process
+  .venv\Scripts\Activate.ps1
+  ```
+
+- Window Bash (cmd)
+
+  ```shell
+  source .venv/Scripts/activate
+  ```
+
+- Linux/macOS
+
+  ```sh
+  source .venv/bin/activate
+  ```
+
+### Cập nhật database
+Chạy sau mỗi lần git pull
+```shell
+alembic upgrade head
+```
+
+### Khởi chạy server
+```
+fastapi dev main.py
+```
+
+Server sẽ chạy trên http://localhost:8000
 
 Kiểm tra API Documentation tại http://localhost:8000/docs (Swagger UI) hoặc http://localhost:8000/redoc (ReDoc)
