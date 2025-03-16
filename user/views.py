@@ -57,5 +57,5 @@ async def create_current_avatar(file: UploadFile, current_user: Annotated[User, 
         session.commit()
 
         return JSONResponse(
-            content= "Upload avatar success!"
+            content="Upload avatar success!"
         )

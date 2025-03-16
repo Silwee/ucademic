@@ -4,6 +4,8 @@ from decimal import Decimal
 from pydantic import field_validator
 from sqlmodel import SQLModel, Field
 
+from data.core import DtoModel
+
 
 class Course(SQLModel, table=True):
     id: uuid.UUID = Field(primary_key=True, index=True, default_factory=uuid.uuid4)
@@ -15,39 +17,37 @@ class Course(SQLModel, table=True):
     price: Decimal = Field(decimal_places=2)
 
 
-class CourseCreate(SQLModel):
+class CourseCreate(DtoModel):
     title: str
-    description: str | None
+    description: str | None = None
     category: str
     level: str
     language: str
-    price: float
+    price: Decimal
 
-    @field_validator("level", mode="before")
+    @field_validator("level")
     def validate_level(cls, v):
-        if v not in ["Beginner", "Intermediate", "Advanced", "beginner", "intermediate", "advanced"]:
-            raise ValueError("Invalid level")
+        if v not in ["Beginner", "Intermediate", "Advanced"]:
+            raise ValueError("Level must be Beginner, Intermediate or Advanced")
         return v
 
-    @field_validator("language", mode="before")
+    @field_validator("language")
     def validate_language(cls, v):
-        if v not in ["Vietnamese", "English", "vietnamese", "english", "vi", "en"]:
-            raise ValueError("Invalid language")
+        if v not in ["Vietnamese", "English", "vi", "en"]:
+            raise ValueError("Language must be Vietnamese or English (vi, en)")
         return v
 
-    @field_validator("price", mode="before")
+    @field_validator("price")
     def validate_price(cls, v):
-        if v is not float:
-            raise ValueError("Invalid price")
         if v < 0:
             raise ValueError("Price must be greater than 0")
         return v
 
 
-class CourseResponse(SQLModel):
+class CourseResponse(DtoModel):
     id: uuid.UUID
     title: str
-    description: str | None
+    description: str | None = None
     category: str
     level: str
     language: str
