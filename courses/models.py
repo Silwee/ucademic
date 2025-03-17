@@ -1,8 +1,8 @@
+import json
 import uuid
 from decimal import Decimal
 
-from pydantic import field_validator, Json
-from pydantic_core import to_json
+from pydantic import field_validator
 from sqlmodel import SQLModel, Field, Relationship
 
 from data.core import DtoModel, new_uuid
@@ -33,7 +33,7 @@ class Category(SQLModel, table=True):
 
 class CourseCreate(DtoModel):
     title: str
-    description: dict | None = None
+    description: dict | str | None = None
     categories: list[str] | list[Category]
     level: str
     languages: list[str] | str
@@ -82,9 +82,9 @@ class CourseCreate(DtoModel):
         return v
 
     @field_validator("description")
-    def validate_description(cls, v: dict | None = None):
+    def validate_description(cls, v):
         if v is not None:
-            return v.__str__()
+            return json.dumps(v)
         return v
 
 
@@ -100,16 +100,16 @@ class CategoryResponse(DtoModel):
 class CourseResponse(DtoModel):
     id: uuid.UUID
     title: str
-    description: str | Json | None = None
+    description: dict | str | None = None
     categories: list[str] | list[Category]
     level: str
     languages:  list[str] | str
     price: float
 
     @field_validator("description")
-    def validate_description(cls, v):
+    def validate_description(cls, v: str):
         if v is not None:
-            return to_json(v)
+            return json.loads(v)
         return v
 
     @field_validator("categories")
@@ -119,3 +119,4 @@ class CourseResponse(DtoModel):
     @field_validator("languages")
     def validate_languages(cls, v: str) -> list[str]:
         return v.split(sep='+')
+
