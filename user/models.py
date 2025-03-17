@@ -15,9 +15,9 @@ class User(SQLModel, table=True):
     phone_number: str | None = Field(default=None, index=True)
     date_of_birth: str | None = Field(default=None, index=True)
     gender: str | None = Field(default=None, index=True)
-    bio: str | None = Field(default=None, index=True)
-    avatar: bytes | None = Field(default=None, index=True)
-    avatar_content_type: str | None = Field(default=None, index=True)
+    bio: str | None = Field(default=None)
+    avatar: bytes | None = Field(default=None)
+    avatar_content_type: str | None = Field(default=None)
 
 
 class UserCreate(DtoModel):
