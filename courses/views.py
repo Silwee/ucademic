@@ -38,7 +38,7 @@ async def create_course(course: CourseCreate):
         query = select(Category).where(col(Category.name).in_(course.categories))
         categories = session.exec(query).all()
 
-        db_course = Course.model_validate(course, update={"categories": categories, "language": course.languages})
+        db_course = Course.model_validate(course, update={"categories": categories})
 
         session.add(db_course)
         session.commit()
