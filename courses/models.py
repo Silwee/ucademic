@@ -5,7 +5,7 @@ from pydantic import field_validator, Json
 from pydantic_core import to_json
 from sqlmodel import SQLModel, Field, Relationship
 
-from data.core import DtoModel
+from data.core import DtoModel, new_uuid
 
 
 class CourseCategoryLink(SQLModel, table=True):
@@ -14,18 +14,18 @@ class CourseCategoryLink(SQLModel, table=True):
 
 
 class Course(SQLModel, table=True):
-    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
     title: str = Field(max_length=100, index=True)
     description: str | None = Field
     level: str = Field(max_length=15, index=True)
-    language: str = Field(max_length=10, index=True)
+    languages: str = Field(max_length=15, index=True)
     price: Decimal = Field(decimal_places=2, index=True)
 
     categories: list["Category"] = Relationship(back_populates="courses", link_model=CourseCategoryLink)
 
 
 class Category(SQLModel, table=True):
-    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
     name: str
 
     courses: list["Course"] = Relationship(back_populates="categories", link_model=CourseCategoryLink)
@@ -34,9 +34,9 @@ class Category(SQLModel, table=True):
 class CourseCreate(DtoModel):
     title: str
     description: dict | None = None
-    category: list[str] | list[Category]
+    categories: list[str] | list[Category]
     level: str
-    language: str
+    languages: list[str] | str
     price: Decimal
 
     model_config = {
@@ -45,13 +45,15 @@ class CourseCreate(DtoModel):
                 {
                     "title": "string",
                     "description": {
-                        "title": "string"
+                        "block": "string"
                     },
-                    "category": [
+                    "categories": [
                         "Development"
                     ],
-                    "level": "Beginner",
-                    "language": "Vietnamese",
+                    "level": "beginner",
+                    "languages": [
+                        "vi"
+                    ],
                     "price": 0
                 }
             ]
@@ -60,15 +62,18 @@ class CourseCreate(DtoModel):
 
     @field_validator("level")
     def validate_level(cls, v: str):
-        if v not in ["Beginner", "Intermediate", "Advanced"]:
+        if v not in ["beginner", "intermediate", "advanced"]:
             raise ValueError("Level must be Beginner, Intermediate or Advanced")
         return v
 
-    @field_validator("language")
-    def validate_language(cls, v):
-        if v not in ["Vietnamese", "English", "vi", "en"]:
-            raise ValueError("Language must be Vietnamese or English (vi, en)")
-        return v
+    @field_validator("languages")
+    def validate_languages(cls, v: list[str]) -> str:
+        r = ""
+        for language in v:
+            if language not in ["vi", "en"]:
+                raise ValueError("Language must be Vietnamese or English (vi, en)")
+            r += language + '+'
+        return r[:-1]
 
     @field_validator("price")
     def validate_price(cls, v):
@@ -96,9 +101,9 @@ class CourseResponse(DtoModel):
     id: uuid.UUID
     title: str
     description: str | Json | None = None
-    categories: list[CategoryResponse] | list[Category]
+    categories: list[str] | list[Category]
     level: str
-    language: str
+    languages:  list[str] | str
     price: float
 
     @field_validator("description")
@@ -109,7 +114,8 @@ class CourseResponse(DtoModel):
 
     @field_validator("categories")
     def validate_categories(cls, v: list[Category]):
-        categories = []
-        for category in v:
-            categories.append(CategoryResponse.model_validate(category.model_dump()))
-        return categories
+        return [category.name for category in v]
+
+    @field_validator("languages")
+    def validate_languages(cls, v: str) -> list[str]:
+        return v.split(sep='+')

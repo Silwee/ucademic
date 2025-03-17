@@ -35,10 +35,10 @@ async def get_course(course_id: int):
 async def create_course(course: CourseCreate):
     with Session(engine) as session:
         # Find corresponding Category from category name
-        query = select(Category).where(col(Category.name).in_(course.category))
+        query = select(Category).where(col(Category.name).in_(course.categories))
         categories = session.exec(query).all()
 
-        db_course = Course.model_validate(course, update={"categories": categories})
+        db_course = Course.model_validate(course, update={"categories": categories, "language": course.languages})
 
         session.add(db_course)
         session.commit()

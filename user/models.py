@@ -4,11 +4,11 @@ from datetime import date
 from pydantic import field_validator
 from sqlmodel import SQLModel, Field
 
-from data.core import DtoModel
+from data.core import DtoModel, new_uuid
 
 
 class User(SQLModel, table=True):
-    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
     email: str = Field(unique=True, index=True)
     hashed_password: str = Field(min_length=8)
     full_name: str | None = Field(default=None, index=True)
