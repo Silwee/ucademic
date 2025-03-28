@@ -2,13 +2,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from auth.access_token import AccessToken, create_access_token
 from auth.auth_user import authenticate_user
 from auth.password import get_password_hash
-from user.models import UserCreate, User
-from data.engine import engine
+from data.query import run_sql_select_query, run_sql_save_query
+from user.dtos import UserCreate
+from user.models import User
 
 auth_router = APIRouter(
     prefix="/auth",
@@ -19,18 +20,19 @@ auth_router = APIRouter(
 @auth_router.post("/register", response_model=AccessToken)
 async def register(user_create: UserCreate):
     hashed_password = get_password_hash(user_create.password)
-    with Session(engine) as session:
-        query = select(User).where(User.email == user_create.email)
-        existing_user = session.exec(query).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User already existed",
-            )
-        db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+
+    query = select(User).where(User.email == user_create.email)
+    existing_user = run_sql_select_query(query, mode="one")
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User already existed",
+        )
+
+    db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
+    db_user = run_sql_save_query(db_user)
+
     access_token = create_access_token(data={"sub": db_user.email})
     return AccessToken(access_token=access_token, token_type="bearer")
 

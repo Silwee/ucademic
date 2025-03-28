@@ -1,9 +1,8 @@
-import re
 from contextlib import asynccontextmanager
-from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_pagination import add_pagination
 
 from auth.views import auth_router
 from courses.views import courses_router
@@ -16,6 +15,7 @@ async def lifespan(app: FastAPI):
     # create_db_and_tables()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+add_pagination(app)
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(courses_router)

@@ -4,3 +4,5 @@ pydantic
 PyJWT
 sqlmodel
 alembic
+boto3
+fastapi-pagination
