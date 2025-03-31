@@ -60,5 +60,5 @@ async def upload_current_user_avatar(file: UploadFile, current_user: Annotated[U
                              ExtraArgs={'ContentType': file.content_type}
                              )
 
-    user.avatar_link = cloudfront_url + filename
+    user.avatar = cloudfront_url + filename
     return run_sql_save_query(user)
