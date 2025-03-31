@@ -56,7 +56,6 @@ async def upload_course_thumbnail(course_id: UUID, file: UploadFile):
     return run_sql_save_query(course, dto=CourseResponse)
 
 
-
 @courses_router.post(path="/",
                      responses={
                          200: {"model": CourseResponse},
@@ -64,8 +63,8 @@ async def upload_course_thumbnail(course_id: UUID, file: UploadFile):
                          409: {"description": "Course title already existed."},
                      }
                      )
-async def create_course(course: CourseCreate):
-    query = select(Course).where(col(Course.title) == course.title)
+async def create_course(course_create: CourseCreate):
+    query = select(Course).where(col(Course.title) == course_create.title)
     courses = run_sql_select_query(query, mode="all")
 
     if len(courses) != 0:
@@ -75,6 +74,35 @@ async def create_course(course: CourseCreate):
         )
 
     # Find corresponding Category from category name
+    query = select(Category).where(col(Category.name).in_(course_create.categories))
+    categories = run_sql_select_query(query, mode="all")
+
+    if len(categories) == 0:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found."
+        )
+
+    db_course = Course.model_validate(course_create, update={"categories": categories})
+    return run_sql_save_query(db_course, dto=CourseResponse)
+
+
+@courses_router.put(path="/",
+                    responses={
+                        200: {"model": CourseResponse},
+                        404: {"description": "Course/Category not found."},
+                    }
+                    )
+async def update_course(course_update: CourseCreate):
+    query = select(Course).where(col(Course.title) == course_update.title)
+    course = run_sql_select_query(query, mode="one")
+
+    if course is None:
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Course not found."
+        )
+
     query = select(Category).where(col(Category.name).in_(course.categories))
     categories = run_sql_select_query(query, mode="all")
 
@@ -84,8 +112,8 @@ async def create_course(course: CourseCreate):
             detail="Category not found."
         )
 
-    db_course = Course.model_validate(course, update={"categories": categories})
-    return run_sql_save_query(db_course, dto=CourseResponse)
+    course.sqlmodel_update(course, update={"categories": categories})
+    return run_sql_save_query(course, dto=CourseResponse)
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])
@@ -100,15 +128,15 @@ async def get_all_category():
                          409: {"description": "Category already existed."},
                      }
                      )
-async def create_category(category: CategoryCreate):
-    query = select(Category).where(col(Category.name) == category.name)
-    courses = run_sql_select_query(query, mode="all")
+async def create_category(category_create: CategoryCreate):
+    query = select(Category).where(col(Category.name) == category_create.name)
+    existed_category = run_sql_select_query(query, mode="all")
 
-    if len(courses) != 0:
+    if len(existed_category) != 0:
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Category name already existed."
         )
 
-    db_category = Category.model_validate(category)
-    return run_sql_save_query(db_category)
+    category = Category.model_validate(category_create)
+    return run_sql_save_query(category)

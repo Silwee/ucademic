@@ -6,4 +6,4 @@ s3_client = boto3.client("s3",
                          aws_secret_access_key="")
 
 bucket_name = "ucademic-images-videos-s3"
-cloudfront_url = 'd37u0eh7zt2bro.cloudfront.net/'
+cloudfront_url = 'https://d37u0eh7zt2bro.cloudfront.net/'
