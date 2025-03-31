@@ -29,6 +29,26 @@ class CourseCreate(DtoModel):
     @field_validator("description", mode="before")
     def validate_description(cls, v):
         """Dump the description as a string in database"""
+        if v is None:
+            return v
+        if isinstance(v, dict):
+            return json.dumps(v)
+        raise TypeError("Description must be in JSON")
+
+
+class CourseUpdate(DtoModel):
+    title: str | None = None
+    description: dict | str | None = None
+    categories: list[str] | list[Category] | None = None
+    level: Literal["beginner", "intermediate", "advanced"] | None = None
+    language: Literal["vi", "en"] | None = None
+    price: Decimal | None = Field(default=0, ge=0, description="Price must be greater than 0")
+
+    @field_validator("description", mode="before")
+    def validate_description(cls, v):
+        """Dump the description as a string in database"""
+        if v is None:
+            return v
         if isinstance(v, dict):
             return json.dumps(v)
         raise TypeError("Description must be in JSON")
