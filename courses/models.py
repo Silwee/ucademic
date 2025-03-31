@@ -16,7 +16,7 @@ class Course(SQLModel, table=True):
     title: str = Field(max_length=100, index=True)
     description: str | None = Field
     level: str = Field(max_length=15, index=True)
-    languages: str = Field(max_length=10, index=True)
+    language: str = Field(max_length=10, index=True)
     price: Decimal = Field(decimal_places=2, index=True)
     thumbnail: str | None = Field(default=None, nullable=True)
 

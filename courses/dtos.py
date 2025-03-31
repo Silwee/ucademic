@@ -23,7 +23,7 @@ class CourseCreate(DtoModel):
     description: dict | str | None = None
     categories: list[str] | list[Category]
     level: Literal["beginner", "intermediate", "advanced"]
-    languages: Literal["vi", "en"]
+    language: Literal["vi", "en"]
     price: Decimal = Field(ge=0, description="Price must be greater than 0")
 
     @field_validator("description", mode="before")
@@ -40,7 +40,7 @@ class CourseResponse(DtoModel):
     description: dict | str | None = None
     categories: list[str] | list[Category]
     level: str
-    languages: str
+    language: str
     price: float
     thumbnail: str | None = None
 
