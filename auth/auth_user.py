@@ -19,9 +19,9 @@ def authenticate_user(email: str, password: str):
         query = select(User).where(User.email == email)
         user = session.exec(query).first()
         if not user:
-            return False
+            return None
         if not verify_password(password, user.hashed_password):
-            return False
+            return None
         return user
 
 
