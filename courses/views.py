@@ -6,9 +6,10 @@ from fastapi_pagination import Page, paginate
 from sqlmodel import select, col, Session
 
 from auth.auth_user import get_current_user
-from courses.dtos import CourseResponse, CourseCreate, CategoryResponse, CategoryCreate, CourseUpdate
-from courses.models import Course, Category
-from data.aws import s3_client, bucket_name, cloudfront_url
+from courses.dtos import CourseResponse, CourseCreate, CategoryResponse, CategoryCreate, CourseUpdate, SectionCreate, \
+    LessonCreate, LessonResponse, SectionResponse
+from courses.models import Course, Category, Section, Lesson
+from data.aws import s3_client, bucket_name, cloudfront_url, media_convert_client
 from data.engine import engine
 
 courses_router = APIRouter(
@@ -46,7 +47,7 @@ async def upload_course_thumbnail(course_id: UUID, file: UploadFile):
                 detail="Course not found",
             )
 
-        filename = 'course/' + course.id.__str__()
+        filename = 'course/thumbnail/' + course.id.__str__()
 
         s3_client.upload_fileobj(Fileobj=file.file,
                                  Bucket=bucket_name,
@@ -128,6 +129,141 @@ async def update_course(course_id: UUID, course_update: CourseUpdate):
         session.refresh(course)
 
         return course
+
+
+@courses_router.post("/{course_id}/section",
+                     responses={
+                         200: {"model": SectionResponse},
+                         404: {"description": "Course not found."},
+                     }
+                     )
+async def add_section(course_id: UUID, section_create: SectionCreate):
+    with Session(engine) as session:
+        course = session.exec(select(Course)
+                              .where(col(Course.id) == course_id)
+                              ).first()
+
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Course not found."
+            )
+
+        section = Section.model_validate(section_create, update={"course_section": course})
+        session.add(section)
+        session.commit()
+        session.refresh(section)
+        return section
+
+
+@courses_router.post("/section/{section_id}/lesson",
+                     responses={
+                         200: {"model": LessonResponse},
+                         404: {"description": "Course/Section not found."},
+                     }
+                     )
+async def add_lesson(section_id: UUID, lesson_create: LessonCreate):
+    with Session(engine) as session:
+        section = session.exec(select(Section)
+                               .where(col(Section.id) == section_id)
+                               ).first()
+
+        if section is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Course not found."
+            )
+
+        lesson = Lesson.model_validate(lesson_create, update={"section_lesson": section})
+        session.add(lesson)
+        session.commit()
+        session.refresh(lesson)
+        return lesson
+
+
+@courses_router.post("/lesson/{lesson_id}/video",
+                     responses={
+                         200: {"model": LessonResponse},
+                         404: {"description": "Lesson not found."},
+                     }
+                     )
+async def upload_lesson_video(lesson_id: UUID, file: UploadFile):
+    with Session(engine) as session:
+        lesson = session.exec(select(Lesson)
+                               .where(col(Lesson.id) == lesson_id)
+                               ).first()
+
+        if lesson is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Course not found."
+            )
+
+        path = 'course/video/' + lesson.id.__str__() + '/'
+
+        s3_client.upload_fileobj(Fileobj=file.file,
+                                 Bucket=bucket_name,
+                                 Key=path + "original",
+                                 ExtraArgs={'ContentType': file.content_type}
+                                 )
+
+        job = media_convert_client.create_job(
+            Role='arn:aws:iam::971422717054:role/service-role/MediaConvert_Default_Role',
+            Settings={
+                "TimecodeConfig": {
+                    "Source": "ZEROBASED"
+                },
+                "OutputGroups": [
+                    {
+                        "CustomName": "Test_group_name",
+                        "Name": "Apple HLS",
+                        "Outputs": [
+                            {
+                                "Preset": "System-Avc_16x9_720p_29_97fps_3500kbps",
+                                "OutputSettings": {
+                                    "HlsSettings": {
+                                        "SegmentModifier": "segment_test"
+                                    }
+                                },
+                                "NameModifier": "output_test"
+                            }
+                        ],
+                        "OutputGroupSettings": {
+                            "Type": "HLS_GROUP_SETTINGS",
+                            "HlsGroupSettings": {
+                                "SegmentLength": 10,
+                                "Destination": "s3://ucademic-images-videos-s3/" + path + "hls",
+                                "DestinationSettings": {
+                                    "S3Settings": {
+                                        "StorageClass": "STANDARD"
+                                    }
+                                },
+                                "MinSegmentLength": 0
+                            }
+                        }
+                    }
+                ],
+                "FollowSource": 1,
+                "Inputs": [
+                    {
+                        "AudioSelectors": {
+                            "Audio Selector 1": {
+                                "DefaultSelection": "DEFAULT"
+                            }
+                        },
+                        "VideoSelector": {},
+                        "TimecodeSource": "ZEROBASED",
+                        "FileInput": "s3://ucademic-images-videos-s3/" + path + "original"
+                    }
+                ]
+            }
+        )
+
+        lesson.link = cloudfront_url + path + 'hls.m3u8'
+        session.add(lesson)
+        session.commit()
+        session.refresh(lesson)
+        return lesson
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])

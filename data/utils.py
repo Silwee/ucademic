@@ -1,5 +1,6 @@
 import uuid
 
+from pydantic import AliasGenerator
 from pydantic.alias_generators import to_camel
 from sqlmodel import SQLModel
 
@@ -7,7 +8,10 @@ from sqlmodel import SQLModel
 class DtoModel(SQLModel):
     class Config:
         populate_by_name = True
-        alias_generator = to_camel
+        alias_generator = AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel
+        )
 
 
 def new_uuid() -> uuid.UUID:
