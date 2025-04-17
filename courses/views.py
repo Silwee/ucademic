@@ -1,16 +1,18 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, UploadFile, HTTPException, status
+import av
+from fastapi import APIRouter, Depends, UploadFile, HTTPException, status, BackgroundTasks
 from fastapi_pagination import Page, paginate
 from sqlmodel import select, col, Session
 
 from auth.auth_user import get_current_user
 from courses.dtos import CourseResponse, CourseCreate, CategoryResponse, CategoryCreate, CourseUpdate, SectionCreate, \
-    LessonCreate, LessonResponse, SectionResponse
-from courses.models import Course, Category, Section, Lesson
+    LessonCreate, LessonResponse, SectionResponse, LessonResourceDto
+from courses.models import Course, Category, Section, Lesson, LessonResource
+from courses.service import get_lesson, transcode_video, lesson_uploading
 from data.aws import s3_client, bucket_name, cloudfront_url, media_convert_client
-from data.engine import engine
+from data.engine import engine, get_session
 
 courses_router = APIRouter(
     prefix="/course",
@@ -131,6 +133,13 @@ async def update_course(course_id: UUID, course_update: CourseUpdate):
         return course
 
 
+@courses_router.get("/section/{section_id}", response_model=SectionResponse)
+async def get_section(section_id: UUID):
+    with Session(engine) as session:
+        section = session.get(Section, section_id)
+        return SectionResponse.model_validate(section)
+
+
 @courses_router.post("/{course_id}/section",
                      responses={
                          200: {"model": SectionResponse},
@@ -156,6 +165,13 @@ async def add_section(course_id: UUID, section_create: SectionCreate):
         return section
 
 
+@courses_router.get("/lesson/{lesson_id}", response_model=LessonResponse)
+async def get_lesson(lesson_id: UUID):
+    with Session(engine) as session:
+        lesson = session.get(Lesson, lesson_id)
+        return LessonResponse.model_validate(lesson)
+
+
 @courses_router.post("/section/{section_id}/lesson",
                      responses={
                          200: {"model": LessonResponse},
@@ -174,6 +190,9 @@ async def add_lesson(section_id: UUID, lesson_create: LessonCreate):
                 detail="Course not found."
             )
 
+        if lesson_create.type != 'text':
+            lesson_create.text = None
+
         lesson = Lesson.model_validate(lesson_create, update={"section_lesson": section})
         session.add(lesson)
         session.commit()
@@ -187,83 +206,60 @@ async def add_lesson(section_id: UUID, lesson_create: LessonCreate):
                          404: {"description": "Lesson not found."},
                      }
                      )
-async def upload_lesson_video(lesson_id: UUID, file: UploadFile):
-    with Session(engine) as session:
-        lesson = session.exec(select(Lesson)
-                               .where(col(Lesson.id) == lesson_id)
-                               ).first()
+async def upload_lesson_video(lesson_id: UUID,
+                              file: UploadFile,
+                              background_tasks: BackgroundTasks,
+                              session: Annotated[Session, Depends(get_session)]):
+    lesson = get_lesson(session, lesson_id)
 
-        if lesson is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Course not found."
-            )
-
-        path = 'course/video/' + lesson.id.__str__() + '/'
-
-        s3_client.upload_fileobj(Fileobj=file.file,
-                                 Bucket=bucket_name,
-                                 Key=path + "original",
-                                 ExtraArgs={'ContentType': file.content_type}
-                                 )
-
-        job = media_convert_client.create_job(
-            Role='arn:aws:iam::971422717054:role/service-role/MediaConvert_Default_Role',
-            Settings={
-                "TimecodeConfig": {
-                    "Source": "ZEROBASED"
-                },
-                "OutputGroups": [
-                    {
-                        "CustomName": "Test_group_name",
-                        "Name": "Apple HLS",
-                        "Outputs": [
-                            {
-                                "Preset": "System-Avc_16x9_720p_29_97fps_3500kbps",
-                                "OutputSettings": {
-                                    "HlsSettings": {
-                                        "SegmentModifier": "segment_test"
-                                    }
-                                },
-                                "NameModifier": "output_test"
-                            }
-                        ],
-                        "OutputGroupSettings": {
-                            "Type": "HLS_GROUP_SETTINGS",
-                            "HlsGroupSettings": {
-                                "SegmentLength": 10,
-                                "Destination": "s3://ucademic-images-videos-s3/" + path + "hls",
-                                "DestinationSettings": {
-                                    "S3Settings": {
-                                        "StorageClass": "STANDARD"
-                                    }
-                                },
-                                "MinSegmentLength": 0
-                            }
-                        }
-                    }
-                ],
-                "FollowSource": 1,
-                "Inputs": [
-                    {
-                        "AudioSelectors": {
-                            "Audio Selector 1": {
-                                "DefaultSelection": "DEFAULT"
-                            }
-                        },
-                        "VideoSelector": {},
-                        "TimecodeSource": "ZEROBASED",
-                        "FileInput": "s3://ucademic-images-videos-s3/" + path + "original"
-                    }
-                ]
-            }
+    # Use PyAV to get the video's location
+    duration_seconds = 0
+    try:
+        video_stream = av.open(file.file).streams.video[0]
+        if video_stream.duration is not None and video_stream.time_base is not None:
+            duration_seconds = int(video_stream.duration * video_stream.time_base)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can't determine video format."
         )
 
-        lesson.link = cloudfront_url + path + 'hls.m3u8'
-        session.add(lesson)
+    path = 'course/video/' + lesson.id.__str__() + '/'
+
+    # Reset file to start
+    file.file.seek(0)
+
+    # Upload the original video to s3
+    s3_client.upload_fileobj(Fileobj=file.file,
+                             Bucket=bucket_name,
+                             Key=path + "original",
+                             ExtraArgs={'ContentType': file.content_type}
+                             )
+
+    # Upload to s3 in the background
+    background_tasks.add_task(transcode_video,
+                              lesson_id=lesson.id,
+                              path=path,
+                              duration_seconds=duration_seconds)
+
+    return lesson_uploading(session, lesson)
+
+
+@courses_router.post("/lesson/{lesson_id}/resource", response_model=LessonResponse)
+async def upload_lesson_resource(lesson_id: UUID, resource_create: LessonResourceDto):
+    with Session(engine) as session:
+        lesson = session.get(Lesson, lesson_id)
+        if lesson is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Lesson not found."
+            )
+
+        resource = LessonResource.model_validate(resource_create, update={"lesson_resource": lesson})
+        session.add(resource)
         session.commit()
-        session.refresh(lesson)
-        return lesson
+        session.refresh(resource)
+        return LessonResponse.model_validate(resource.lesson_resource)
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])

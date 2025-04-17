@@ -19,8 +19,25 @@ class CategoryResponse(DtoModel):
     name: str
 
 
+class LessonResourceDto(DtoModel):
+    title: str
+    url: str
+
+
 class LessonCreate(DtoModel):
     title: str
+    type: Literal["video", "text", "file"] | None = 'video'
+    free_preview: bool | None = False
+    text: dict | str | None = None
+
+    @field_validator("text")
+    def validate_text(cls, v):
+        """Dump the description as a string in database"""
+        if v is None:
+            return v
+        if isinstance(v, dict):
+            return json.dumps(v)
+        raise TypeError("Text must be in JSON")
 
 
 class LessonResponse(DtoModel):
@@ -29,6 +46,16 @@ class LessonResponse(DtoModel):
     duration: int | None = None
     free_preview: bool
     link: str | None = None
+    text: dict | str | None = None
+
+    resources: list[LessonResourceDto] | None = None
+
+    @field_validator("text")
+    def validate_description(cls, v):
+        """Load the text back to JSON (as a dict) if not null"""
+        if v is not None:
+            return json.loads(v)
+        return v
 
 
 class SectionCreate(DtoModel):
@@ -119,7 +146,7 @@ class CourseResponse(DtoModel):
     what_will_you_learn: list[str] | str | None = None
     rating: float | None = None
     students: int | None = None
-    duration: str | int | None = None
+    duration: int | None = None
     lessons: int | None = None
     last_updated: datetime | None = None
 
@@ -137,21 +164,6 @@ class CourseResponse(DtoModel):
         """Dump the what_will_you_learn as a string in database"""
         if v is not None:
             return v.split('`')
-        return v
-
-    @field_validator("duration")
-    def validate_duration(cls, v: int | None):
-        if v is not None:
-            r = ""
-            if v > 3600:
-                r += str(v // 3600) + "h "
-                v -= (v // 3600) * 3600
-            if v > 60:
-                r += str(v // 60) + "m "
-                v -= (v // 60) * 60
-            if v > 0:
-                r += str(v) + "s"
-            return r
         return v
 
     @field_validator("categories")

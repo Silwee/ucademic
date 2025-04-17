@@ -24,9 +24,9 @@ class Course(SQLModel, table=True):
 
     requirements: str | None = Field(default=None, nullable=True)
     what_will_you_learn: str | None = Field(default=None, nullable=True)
-    rating: float | None = Field(default=4.5, nullable=True, index=True)
-    students: int | None = Field(default=20000, nullable=True, index=True)
-    duration: int | None = Field(default=140, nullable=True, index=True)
+    rating: float | None = Field(default=0, nullable=True, index=True)
+    students: int | None = Field(default=0, nullable=True, index=True)
+    duration: int | None = Field(default=0, nullable=True, index=True)
     lessons: int | None = Field(default=0, nullable=True, index=True)
     last_updated: datetime | None = Field(default_factory=datetime.now, nullable=True, index=True)
 
@@ -54,13 +54,29 @@ class Section(SQLModel, table=True):
 class Lesson(SQLModel, table=True):
     id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
     title: str = Field(index=True)
+    type: str = Field(default='video', index=True)
 
+    # For video type
     duration: int | None = Field(default=None, nullable=True, index=True)
     free_preview: bool = Field(default=False, index=True)
+
+    # For text type
+    text: str | None = Field(default=None, nullable=True)
+
+    # For video/file type
     link: str | None = Field(default=None, nullable=True)
 
     section_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="section.id")
     section_lesson: Section | None = Relationship(back_populates="lessons")
+    resources: list["LessonResource"] = Relationship(back_populates="lesson_resource")
+
+
+class LessonResource(SQLModel, table=True):
+    title: str = Field(primary_key=True, index=True, nullable=False)
+    url: str | None = Field(default=None, nullable=True)
+
+    lesson_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="lesson.id")
+    lesson_resource: Lesson | None = Relationship(back_populates="resources")
 
 
 # class VideoLesson(Lesson, table=True):
