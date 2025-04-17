@@ -8,7 +8,7 @@ from data.aws import media_convert_client, cloudfront_url
 from data.engine import engine
 
 
-def get_lesson(session, lesson_id):
+def get_lesson_in_db(session, lesson_id):
     lesson = session.get(Lesson, lesson_id)
 
     if lesson is None:
