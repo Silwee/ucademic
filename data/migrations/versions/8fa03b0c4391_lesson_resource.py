@@ -31,7 +31,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_lessonresource_lesson_id'), 'lessonresource', ['lesson_id'], unique=False)
     op.create_index(op.f('ix_lessonresource_title'), 'lessonresource', ['title'], unique=False)
-    op.add_column('lesson', sa.Column('type', sqlmodel.sql.sqltypes.AutoString(), nullable=False, default='video'))
+    op.add_column('lesson', sa.Column('type', sqlmodel.sql.sqltypes.AutoString(), nullable=True, default='video'))
     op.add_column('lesson', sa.Column('text', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
     op.create_index(op.f('ix_lesson_type'), 'lesson', ['type'], unique=False)
     # ### end Alembic commands ###
