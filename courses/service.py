@@ -8,7 +8,7 @@ from data.aws import media_convert_client, cloudfront_url
 from data.engine import engine
 
 
-def get_lesson(session, lesson_id):
+def get_lesson_in_db(session, lesson_id):
     lesson = session.get(Lesson, lesson_id)
 
     if lesson is None:
@@ -85,7 +85,7 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
     print(job)
 
     with Session(engine) as session:
-        lesson = get_lesson(session=session, lesson_id=lesson_id)
+        lesson = get_lesson_in_db(session=session, lesson_id=lesson_id)
         # Update the database object
         if lesson.section_lesson.course_section.duration is not None:
             if lesson.duration is not None and lesson.duration != 0:

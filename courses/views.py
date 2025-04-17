@@ -10,7 +10,7 @@ from auth.auth_user import get_current_user
 from courses.dtos import CourseResponse, CourseCreate, CategoryResponse, CategoryCreate, CourseUpdate, SectionCreate, \
     LessonCreate, LessonResponse, SectionResponse, LessonResourceDto
 from courses.models import Course, Category, Section, Lesson, LessonResource
-from courses.service import get_lesson, transcode_video, lesson_uploading
+from courses.service import transcode_video, lesson_uploading, get_lesson_in_db
 from data.aws import s3_client, bucket_name, cloudfront_url, media_convert_client
 from data.engine import engine, get_session
 
@@ -210,7 +210,7 @@ async def upload_lesson_video(lesson_id: UUID,
                               file: UploadFile,
                               background_tasks: BackgroundTasks,
                               session: Annotated[Session, Depends(get_session)]):
-    lesson = get_lesson(session, lesson_id)
+    lesson = get_lesson_in_db(session, lesson_id)
 
     # Use PyAV to get the video's location
     duration_seconds = 0
