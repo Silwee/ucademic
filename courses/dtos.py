@@ -78,7 +78,7 @@ class CourseCreate(DtoModel):
     price: Decimal = Field(ge=0, description="Price must be greater than 0")
 
     requirements: str | None = None
-    what_will_you_learn: list[str] | str | None = None
+    what_you_will_learn: list[str] | str | None = None
 
     @field_validator("description")
     def validate_description(cls, v):
@@ -89,14 +89,14 @@ class CourseCreate(DtoModel):
             return json.dumps(v)
         raise TypeError("Description must be in JSON")
 
-    @field_validator("what_will_you_learn")
-    def validate_what_will_you_learn(cls, v):
-        """Dump the what_will_you_learn as a string in database"""
+    @field_validator("what_you_will_learn")
+    def validate_what_you_will_learn(cls, v):
+        """Dump the what_you_will_learn as a string in database"""
         if v is None:
             return v
         if isinstance(v, list):
             return "`".join(v)
-        raise TypeError("WhatWillYouLearn must be a List")
+        raise TypeError("WhatYouWillLearn must be a List")
 
 
 class CourseUpdate(DtoModel):
@@ -109,7 +109,7 @@ class CourseUpdate(DtoModel):
     last_updated: datetime | None = datetime.now()
 
     requirements: str | None = None
-    what_will_you_learn: list[str] | str | None = None
+    what_you_will_learn: list[str] | str | None = None
     categories: list[str] | list[Category] | None = None
 
     @field_validator("description", mode="before")
@@ -121,14 +121,14 @@ class CourseUpdate(DtoModel):
             return json.dumps(v)
         raise TypeError("Description must be in JSON")
 
-    @field_validator("what_will_you_learn")
-    def validate_what_will_you_learn(cls, v):
-        """Dump the what_will_you_learn as a string in database"""
+    @field_validator("what_you_will_learn")
+    def validate_what_you_will_learn(cls, v):
+        """Dump the what_you_will_learn as a string in database"""
         if v is None:
             return v
         if isinstance(v, list):
             return "`".join(v)
-        raise TypeError("WhatWillYouLearn must be a List")
+        raise TypeError("WhatYouWillLearn must be a List")
 
 
 class CourseResponse(DtoModel):
@@ -143,7 +143,7 @@ class CourseResponse(DtoModel):
     thumbnail: str | None = None
 
     requirements: str | None = None
-    what_will_you_learn: list[str] | str | None = None
+    what_you_will_learn: list[str] | str | None = None
     rating: float | None = None
     students: int | None = None
     duration: int | None = None
@@ -159,9 +159,9 @@ class CourseResponse(DtoModel):
             return json.loads(v)
         return v
 
-    @field_validator("what_will_you_learn")
-    def validate_what_will_you_learn(cls, v: str | None):
-        """Dump the what_will_you_learn as a string in database"""
+    @field_validator("what_you_will_learn")
+    def validate_what_you_will_learn(cls, v: str | None):
+        """Dump the what_you_will_learn as a string in database"""
         if v is not None:
             return v.split('`')
         return v

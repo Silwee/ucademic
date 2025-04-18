@@ -82,8 +82,6 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
         }
     )
 
-    print(job)
-
     with Session(engine) as session:
         lesson = get_lesson_in_db(session=session, lesson_id=lesson_id)
         # Update the database object

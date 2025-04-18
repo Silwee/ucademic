@@ -23,7 +23,7 @@ class Course(SQLModel, table=True):
     thumbnail: str | None = Field(default=None, nullable=True)
 
     requirements: str | None = Field(default=None, nullable=True)
-    what_will_you_learn: str | None = Field(default=None, nullable=True)
+    what_you_will_learn: str | None = Field(default=None, nullable=True)
     rating: float | None = Field(default=0, nullable=True, index=True)
     students: int | None = Field(default=0, nullable=True, index=True)
     duration: int | None = Field(default=0, nullable=True, index=True)
