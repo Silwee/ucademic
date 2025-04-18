@@ -77,7 +77,7 @@ class CourseCreate(DtoModel):
     language: Literal["vi", "en"]
     price: Decimal = Field(ge=0, description="Price must be greater than 0")
 
-    requirements: str | None = None
+    requirements: list[str] | str | None = None
     what_you_will_learn: list[str] | str | None = None
 
     @field_validator("description")
@@ -88,6 +88,15 @@ class CourseCreate(DtoModel):
         if isinstance(v, dict):
             return json.dumps(v)
         raise TypeError("Description must be in JSON")
+
+    @field_validator("requirements")
+    def validate_requirements(cls, v):
+        """Dump the requirements as a string in database"""
+        if v is None:
+            return v
+        if isinstance(v, list):
+            return "`".join(v)
+        raise TypeError("Requirements must be a List")
 
     @field_validator("what_you_will_learn")
     def validate_what_you_will_learn(cls, v):
@@ -121,6 +130,15 @@ class CourseUpdate(DtoModel):
             return json.dumps(v)
         raise TypeError("Description must be in JSON")
 
+    @field_validator("requirements")
+    def validate_requirements(cls, v):
+        """Dump the requirements as a string in database"""
+        if v is None:
+            return v
+        if isinstance(v, list):
+            return "`".join(v)
+        raise TypeError("Requirements must be a List")
+
     @field_validator("what_you_will_learn")
     def validate_what_you_will_learn(cls, v):
         """Dump the what_you_will_learn as a string in database"""
@@ -142,7 +160,7 @@ class CourseResponse(DtoModel):
     price: float
     thumbnail: str | None = None
 
-    requirements: str | None = None
+    requirements: list[str] | str | None = None
     what_you_will_learn: list[str] | str | None = None
     rating: float | None = None
     students: int | None = None
@@ -159,9 +177,16 @@ class CourseResponse(DtoModel):
             return json.loads(v)
         return v
 
+    @field_validator("requirements")
+    def validate_requirements(cls, v: str | None):
+        """Load the requirements back to list if not null"""
+        if v is not None:
+            return v.split('`')
+        return v
+
     @field_validator("what_you_will_learn")
     def validate_what_you_will_learn(cls, v: str | None):
-        """Dump the what_you_will_learn as a string in database"""
+        """Load the what_you_will_learn back to list if not null"""
         if v is not None:
             return v.split('`')
         return v
