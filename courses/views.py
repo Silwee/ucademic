@@ -8,8 +8,8 @@ from sqlmodel import select, col, Session
 
 from auth.auth_user import get_current_user
 from courses.dtos import CourseResponse, CourseCreate, CategoryResponse, CategoryCreate, CourseUpdate, SectionCreate, \
-    LessonCreate, LessonResponse, SectionResponse, LessonResourceDto
-from courses.models import Course, Category, Section, Lesson, LessonResource
+    LessonCreate, LessonResponse, SectionResponse, LessonResourceDto, QuizResponse, QuizCreate
+from courses.models import Course, Category, Section, Lesson, LessonResource, Quiz, QuizQuestion
 from courses.service import transcode_video, lesson_uploading, get_lesson_in_db
 from data.aws import s3_client, bucket_name, cloudfront_url, media_convert_client
 from data.engine import engine, get_session
@@ -135,7 +135,7 @@ async def update_course(course_id: UUID, course_update: CourseUpdate):
 
 @courses_router.get("/section/{section_id}", response_model=SectionResponse)
 async def get_section(section_id: UUID):
-    with Session(engine) as session:
+    with (Session(engine) as session):
         section = session.get(Section, section_id)
         return SectionResponse.model_validate(section)
 
@@ -162,7 +162,7 @@ async def add_section(course_id: UUID, section_create: SectionCreate):
         session.add(section)
         session.commit()
         session.refresh(section)
-        return section
+        return SectionResponse.model_validate(section)
 
 
 @courses_router.get("/lesson/{lesson_id}", response_model=LessonResponse)
@@ -260,6 +260,48 @@ async def upload_lesson_resource(lesson_id: UUID, resource_create: LessonResourc
         session.commit()
         session.refresh(resource)
         return LessonResponse.model_validate(resource.lesson_resource)
+
+
+@courses_router.get("/quiz/{quiz_id}", response_model=QuizResponse)
+async def get_quiz(quiz_id: UUID):
+    with Session(engine) as session:
+        quiz = session.get(Quiz, quiz_id)
+        return QuizResponse.model_validate(quiz)
+
+
+@courses_router.post("/section/{section_id}/quiz/",
+                     responses={
+                         200: {"model": QuizResponse},
+                         404: {"description": "Course/Section not found."},
+                     })
+async def add_quiz(section_id: UUID, quiz_create: QuizCreate):
+    with Session(engine) as session:
+        section = session.exec(select(Section)
+                               .where(col(Section.id) == section_id)
+                               ).first()
+
+        if section is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Course not found."
+            )
+
+        quiz = Quiz.model_validate(quiz_create, update={"section_quiz": section, "questions": []})
+        session.add(quiz)
+        session.commit()
+        session.refresh(quiz)
+
+        quiz_id = quiz.id
+        print(quiz_id)
+
+    with Session(engine) as session:
+        for question_create in quiz_create.questions:
+            question = QuizQuestion.model_validate(question_create, update={"quiz_id": quiz_id})
+            session.add(question)
+        session.commit()
+
+        quiz = session.get(Quiz, quiz_id)
+        return QuizResponse.model_validate(quiz)
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])

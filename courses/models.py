@@ -43,18 +43,20 @@ class Category(SQLModel, table=True):
 
 class Section(SQLModel, table=True):
     id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
-    sectionTitle: str = Field(index=True)
+    section_title: str = Field(index=True, nullable=True)
 
     course_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="course.id")
     course_section: Course | None = Relationship(back_populates="contents")
 
     lessons: list["Lesson"] = Relationship(back_populates="section_lesson")
+    quizzes: list["Quiz"] = Relationship(back_populates="section_quiz")
 
 
 class Lesson(SQLModel, table=True):
     id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
     title: str = Field(index=True)
     type: str = Field(default='video', index=True)
+    order_in_section: int = Field(default=None, nullable=True, index=True)
 
     # For video type
     duration: int | None = Field(default=None, nullable=True, index=True)
@@ -69,6 +71,27 @@ class Lesson(SQLModel, table=True):
     section_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="section.id")
     section_lesson: Section | None = Relationship(back_populates="lessons")
     resources: list["LessonResource"] = Relationship(back_populates="lesson_resource")
+
+
+class Quiz(SQLModel, table=True):
+    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
+    title: str = Field(index=True)
+    order_in_section: int = Field(default=None, nullable=True, index=True)
+
+    section_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="section.id")
+    section_quiz: Section | None = Relationship(back_populates="quizzes")
+    questions: list["QuizQuestion"] = Relationship(back_populates="quiz_question")
+
+
+class QuizQuestion(SQLModel, table=True):
+    id: uuid.UUID = Field(primary_key=True, index=True, default_factory=new_uuid)
+    question_name: str = Field(index=True, nullable=False)
+    type: str = Field(default='single', index=True, nullable=True)
+    options: str = Field(default=None, nullable=True)
+    correct_answer: str = Field(default=None, nullable=True)
+
+    quiz_id: uuid.UUID | None = Field(default=None, nullable=True, index=True, foreign_key="quiz.id")
+    quiz_question: Quiz | None = Relationship(back_populates="questions")
 
 
 class LessonResource(SQLModel, table=True):

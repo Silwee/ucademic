@@ -105,3 +105,4 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
         session.add(lesson)
         session.commit()
         session.refresh(lesson)
+
