@@ -67,6 +67,8 @@ class LessonInSectionResponse(DtoModel):
     duration: int | None = None
     free_preview: bool
 
+    resources: list[LessonResourceDto] | None = None
+
 
 class QuizQuestionDto(DtoModel):
     question_name: str | None = None
