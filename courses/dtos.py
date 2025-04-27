@@ -296,6 +296,13 @@ class CourseResponse(DtoModel):
                 d += len(content.section_contents)
         return d
 
+    @computed_field
+    @property
+    def num_student(self) -> int:
+        if self.students is None:
+            return 0
+        return len(self.students)
+
     @field_validator("description")
     def validate_description(cls, v):
         """Load the description back to JSON (as a dict) if not null"""

@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, List
+from typing import Annotated, Literal
 from uuid import UUID
 
 import av

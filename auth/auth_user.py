@@ -4,20 +4,22 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt import InvalidTokenError
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from config import SECRET_KEY, ALGORITHM
 from auth.password import verify_password
+from config import SECRET_KEY, ALGORITHM
+from data.engine import get_session
+from data.service import get_data_in_db
 from user.models import User
-from data.engine import engine
 
 oauth2_scheme = HTTPBearer()
 
 
 def authenticate_user(email: str, password: str):
-    with Session(engine) as session:
-        query = select(User).where(User.email == email)
-        user = session.exec(query).first()
+    with get_session() as session:
+        user = get_data_in_db(session, User,
+                              mode='query_one',
+                              query=select(User).where(User.email == email))
         if not user:
             return None
         if not verify_password(password, user.hashed_password):
@@ -41,9 +43,10 @@ async def get_current_user(token: Annotated[HTTPAuthorizationCredentials, Depend
     except InvalidTokenError:
         raise credentials_exception
 
-    with Session(engine) as session:
-        query = select(User).where(User.email == email)
-        user = session.exec(query).first()
+    with get_session() as session:
+        user = get_data_in_db(session, User,
+                              mode='query_one',
+                              query=select(User).where(User.email == email))
         if user is None:
             raise credentials_exception
 

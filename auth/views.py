@@ -7,7 +7,8 @@ from sqlmodel import select, Session
 from auth.access_token import AccessToken, create_access_token
 from auth.auth_user import authenticate_user
 from auth.password import get_password_hash
-from data.engine import engine
+from data.engine import get_session
+from data.service import save_data_to_db, get_data_in_db
 from user.dtos import UserCreate
 from user.models import User
 
@@ -18,25 +19,22 @@ auth_router = APIRouter(
 
 
 @auth_router.post("/register", response_model=AccessToken)
-async def register(user_create: UserCreate):
-    with Session(engine) as session:
+async def register(
+        user_create: UserCreate,
+        session: Annotated[Session, Depends(get_session)]
+):
+    get_data_in_db(session, User,
+                   mode='query_one',
+                   query=select(User).where(User.email == user_create.email),
+                   check_existed=True)
 
-        existing_user = session.exec(select(User).where(User.email == user_create.email)).first()
-        if existing_user is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User already existed",
-            )
+    hashed_password = get_password_hash(user_create.password)
+    db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
 
-        hashed_password = get_password_hash(user_create.password)
-        db_user = User.model_validate(user_create, update={"hashed_password": hashed_password})
+    save_data_to_db(session, db_user)
 
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-
-        access_token = create_access_token(data={"sub": db_user.email})
-        return AccessToken(access_token=access_token, token_type="bearer")
+    access_token = create_access_token(data={"sub": db_user.email})
+    return AccessToken(access_token=access_token, token_type="bearer")
 
 
 @auth_router.post("/login", response_model=AccessToken)

@@ -37,17 +37,15 @@ async def get_user_profile(
                           check_not_found=True)
 
 
-@user_router.post("/profile", response_model=UserResponse)
+@user_router.put("/profile", response_model=UserResponse)
 async def update_my_profile(
         user_create: UserUpdateProfile,
         current_user: Annotated[User, Depends(get_current_user)],
         session: Annotated[Session, Depends(get_session)]
 ):
-    user = get_data_in_db(session, User, obj_id=current_user.id)
-
     # Use sqlmodel_update for update, model_validate for create
-    user.sqlmodel_update(user_create.model_dump(exclude_unset=True))
-    return save_data_to_db(session, user, dto=UserResponse)
+    current_user.sqlmodel_update(user_create.model_dump(exclude_unset=True))
+    return save_data_to_db(session, current_user, dto=UserResponse)
 
 
 @user_router.post("/me/avatar", response_model=UserResponse)
@@ -56,14 +54,21 @@ async def upload_current_user_avatar(
         current_user: Annotated[User, Depends(get_current_user)],
         session: Annotated[Session, Depends(get_session)]
 ):
-    user = get_data_in_db(session, User, obj_id=current_user.id)
-
-    filename = 'user/' + user.id.__str__()
+    filename = 'user/' + current_user.id.__str__()
 
     s3_client.upload_fileobj(Fileobj=file.file,
                              Bucket=bucket_name,
                              Key=filename,
                              ExtraArgs={'ContentType': file.content_type}
                              )
-    user.avatar = cloudfront_url + filename
-    return save_data_to_db(session, user, dto=UserResponse)
+    current_user.avatar = cloudfront_url + filename
+    return save_data_to_db(session, current_user, dto=UserResponse)
+
+
+@user_router.post('/instructor', response_model=UserResponse)
+async def become_instructor(
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    current_user.is_instructor = True
+    return save_data_to_db(session, current_user, dto=UserResponse)

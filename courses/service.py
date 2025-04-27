@@ -10,7 +10,7 @@ from data.service import get_data_in_db
 
 def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
     # Convert video to HLS format
-    job = media_convert_client.create_job(
+    media_convert_client.create_job(
         Role='arn:aws:iam::971422717054:role/service-role/MediaConvert_Default_Role',
         Settings={
             "TimecodeConfig": {
