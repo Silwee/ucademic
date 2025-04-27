@@ -1,12 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
-from sqlmodel import select, Session
+from fastapi import APIRouter, Depends, UploadFile
+from sqlmodel import Session
 
 from auth.auth_user import get_current_user
 from data.aws import s3_client, bucket_name, cloudfront_url
-from data.engine import engine
+from data.engine import get_session
+from data.service import get_data_in_db, save_data_to_db
 from user.dtos import UserResponse, UserUpdateProfile
 from user.models import User
 
@@ -26,44 +27,43 @@ async def read_users_me(current_user: Annotated[User, Depends(get_current_user)]
                      200: {"model": UserResponse},
                      404: {"description": "User not found"},
                  })
-async def get_user_profile(user_id: UUID):
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.id == user_id)).first()
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
-        return user
+async def get_user_profile(
+        user_id: UUID,
+        session: Annotated[Session, Depends(get_session)]
+):
+    return get_data_in_db(session, User,
+                          obj_id=user_id,
+                          dto=UserResponse,
+                          check_not_found=True)
 
 
 @user_router.post("/profile", response_model=UserResponse)
-async def update_my_profile(user_create: UserUpdateProfile, current_user: Annotated[User, Depends(get_current_user)]):
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.id == current_user.id)).first()
+async def update_my_profile(
+        user_create: UserUpdateProfile,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    user = get_data_in_db(session, User, obj_id=current_user.id)
 
-        # Use sqlmodel_update for update, model_validate for create
-        user.sqlmodel_update(user_create.model_dump(exclude_unset=True))
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
+    # Use sqlmodel_update for update, model_validate for create
+    user.sqlmodel_update(user_create.model_dump(exclude_unset=True))
+    return save_data_to_db(session, user, dto=UserResponse)
 
 
 @user_router.post("/me/avatar", response_model=UserResponse)
-async def upload_current_user_avatar(file: UploadFile, current_user: Annotated[User, Depends(get_current_user)]):
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.id == current_user.id)).first()
+async def upload_current_user_avatar(
+        file: UploadFile,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    user = get_data_in_db(session, User, obj_id=current_user.id)
 
-        filename = 'user/' + user.id.__str__()
+    filename = 'user/' + user.id.__str__()
 
-        s3_client.upload_fileobj(Fileobj=file.file,
-                                 Bucket=bucket_name,
-                                 Key=filename,
-                                 ExtraArgs={'ContentType': file.content_type}
-                                 )
-        user.avatar = cloudfront_url + filename
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
+    s3_client.upload_fileobj(Fileobj=file.file,
+                             Bucket=bucket_name,
+                             Key=filename,
+                             ExtraArgs={'ContentType': file.content_type}
+                             )
+    user.avatar = cloudfront_url + filename
+    return save_data_to_db(session, user, dto=UserResponse)

@@ -41,6 +41,8 @@ class UserResponse(DtoModel):
     bio: str | None = None
     avatar: str | None = None
 
+    is_instructor: bool | None = None
+
     @field_validator("date_of_birth", mode="before")
     def date_of_birth_validator(cls, v):
         if v is not None and isinstance(v, str):

@@ -1,31 +1,11 @@
 import uuid
 
-from fastapi import HTTPException, status
 from sqlmodel import Session
 
 from courses.models import Lesson
 from data.aws import media_convert_client, cloudfront_url
 from data.engine import engine
-
-
-def get_lesson_in_db(session, lesson_id):
-    lesson = session.get(Lesson, lesson_id)
-
-    if lesson is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Lesson not found."
-        )
-
-    return lesson
-
-
-def lesson_uploading(session, lesson: Lesson):
-    lesson.link = "Uploading"
-    session.add(lesson)
-    session.commit()
-    session.refresh(lesson)
-    return lesson
+from data.service import get_data_in_db
 
 
 def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
@@ -38,29 +18,116 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
             },
             "OutputGroups": [
                 {
-                    "CustomName": "Test_group_name",
                     "Name": "Apple HLS",
                     "Outputs": [
                         {
-                            "Preset": "System-Avc_16x9_720p_29_97fps_3500kbps",
-                            "OutputSettings": {
-                                "HlsSettings": {
-                                    "SegmentModifier": "segment_test"
+                            "ContainerSettings": {
+                                "Container": "M3U8",
+                                "M3u8Settings": {}
+                            },
+                            "VideoDescription": {
+                                "Height": 1080,
+                                "CodecSettings": {
+                                    "Codec": "H_264",
+                                    "H264Settings": {
+                                        "MaxBitrate": 5000000,
+                                        "RateControlMode": "QVBR",
+                                        "SceneChangeDetect": "TRANSITION_DETECTION"
+                                    }
                                 }
                             },
-                            "NameModifier": "output_test"
+                            "AudioDescriptions": [
+                                {
+                                    "AudioSourceName": "Audio Selector 1",
+                                    "CodecSettings": {
+                                        "Codec": "AAC",
+                                        "AacSettings": {
+                                            "Bitrate": 96000,
+                                            "CodingMode": "CODING_MODE_2_0",
+                                            "SampleRate": 48000
+                                        }
+                                    }
+                                }
+                            ],
+                            "OutputSettings": {
+                                "HlsSettings": {}
+                            },
+                            "NameModifier": "_1080p"
+                        },
+                        {
+                            "ContainerSettings": {
+                                "Container": "M3U8",
+                                "M3u8Settings": {}
+                            },
+                            "VideoDescription": {
+                                "Height": 720,
+                                "CodecSettings": {
+                                    "Codec": "H_264",
+                                    "H264Settings": {
+                                        "MaxBitrate": 5000000,
+                                        "RateControlMode": "QVBR",
+                                        "SceneChangeDetect": "TRANSITION_DETECTION"
+                                    }
+                                }
+                            },
+                            "AudioDescriptions": [
+                                {
+                                    "AudioSourceName": "Audio Selector 1",
+                                    "CodecSettings": {
+                                        "Codec": "AAC",
+                                        "AacSettings": {
+                                            "Bitrate": 96000,
+                                            "CodingMode": "CODING_MODE_2_0",
+                                            "SampleRate": 48000
+                                        }
+                                    }
+                                }
+                            ],
+                            "OutputSettings": {
+                                "HlsSettings": {}
+                            },
+                            "NameModifier": "_720p"
+                        },
+                        {
+                            "ContainerSettings": {
+                                "Container": "M3U8",
+                                "M3u8Settings": {}
+                            },
+                            "VideoDescription": {
+                                "Height": 360,
+                                "CodecSettings": {
+                                    "Codec": "H_264",
+                                    "H264Settings": {
+                                        "MaxBitrate": 5000000,
+                                        "RateControlMode": "QVBR",
+                                        "SceneChangeDetect": "TRANSITION_DETECTION"
+                                    }
+                                }
+                            },
+                            "AudioDescriptions": [
+                                {
+                                    "AudioSourceName": "Audio Selector 1",
+                                    "CodecSettings": {
+                                        "Codec": "AAC",
+                                        "AacSettings": {
+                                            "Bitrate": 96000,
+                                            "CodingMode": "CODING_MODE_2_0",
+                                            "SampleRate": 48000
+                                        }
+                                    }
+                                }
+                            ],
+                            "OutputSettings": {
+                                "HlsSettings": {}
+                            },
+                            "NameModifier": "_360p"
                         }
                     ],
                     "OutputGroupSettings": {
                         "Type": "HLS_GROUP_SETTINGS",
                         "HlsGroupSettings": {
                             "SegmentLength": 10,
-                            "Destination": "s3://ucademic-images-videos-s3/" + path + "hls",
-                            "DestinationSettings": {
-                                "S3Settings": {
-                                    "StorageClass": "STANDARD"
-                                }
-                            },
+                            "Destination": "s3://ucademic-images-videos-s3/",
                             "MinSegmentLength": 0
                         }
                     }
@@ -83,21 +150,7 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
     )
 
     with Session(engine) as session:
-        lesson = get_lesson_in_db(session=session, lesson_id=lesson_id)
-        # Update the database object
-        if lesson.section_lesson.course_section.duration is not None:
-            if lesson.duration is not None and lesson.duration != 0:
-                lesson.section_lesson.course_section.duration -= lesson.duration
-            lesson.section_lesson.course_section.duration += duration_seconds
-        else:
-            lesson.section_lesson.course_section.duration = duration_seconds
-
-        if lesson.section_lesson.course_section.lessons is not None:
-            if lesson.duration is not None and lesson.duration != 0:
-                lesson.section_lesson.course_section.duration -= 1
-            lesson.section_lesson.course_section.lessons += 1
-        else:
-            lesson.section_lesson.course_section.lessons = 1
+        lesson = get_data_in_db(session, Lesson, obj_id=lesson_id)
 
         lesson.link = cloudfront_url + path + 'hls.m3u8'
         lesson.duration = duration_seconds

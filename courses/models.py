@@ -1,10 +1,15 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 
 from data.utils import new_uuid
+from user.models import UserCourseLink
+
+if TYPE_CHECKING:
+    from user.models import User
 
 
 class CourseCategoryLink(SQLModel, table=True):
@@ -25,13 +30,15 @@ class Course(SQLModel, table=True):
     requirements: str | None = Field(default=None, nullable=True)
     what_you_will_learn: str | None = Field(default=None, nullable=True)
     rating: float | None = Field(default=0, nullable=True, index=True)
-    students: int | None = Field(default=0, nullable=True, index=True)
-    duration: int | None = Field(default=0, nullable=True, index=True)
-    lessons: int | None = Field(default=0, nullable=True, index=True)
     last_updated: datetime | None = Field(default_factory=datetime.now, nullable=True, index=True)
 
     contents: list["Section"] = Relationship(back_populates="course_section")
     categories: list["Category"] = Relationship(back_populates="courses", link_model=CourseCategoryLink)
+
+    instructor_id: uuid.UUID = Field(default=None, index=True, foreign_key="user.id")
+    instructor: "User" = Relationship(back_populates="taught_courses")
+
+    students: list["User"] = Relationship(back_populates="learned_courses", link_model=UserCourseLink)
 
 
 class Category(SQLModel, table=True):
@@ -100,7 +107,3 @@ class LessonResource(SQLModel, table=True):
 
     lesson_id: uuid.UUID | None = Field(default=None, index=True, foreign_key="lesson.id")
     lesson_resource: Lesson | None = Relationship(back_populates="resources")
-
-
-# class VideoLesson(Lesson, table=True):
-

@@ -8,6 +8,7 @@ from pydantic import field_validator, Field, computed_field
 
 from courses.models import Category
 from data.utils import DtoModel
+from user.dtos import UserResponse
 
 
 class CategoryCreate(DtoModel):
@@ -125,11 +126,21 @@ class SectionResponse(DtoModel):
     @computed_field
     @property
     def section_contents(self) -> list[dict] | None:
+        if self.lessons is None:
+            if self.quizzes is not None:
+                return list(map(QuizInSectionResponse.model_validate, self.quizzes))
+            return None
+        if self.quizzes is None:
+            if self.lessons is not None:
+                return list(map(LessonInSectionResponse.model_validate, self.lessons))
+            return None
+
         contents = []
         i = 0
         j = 0
         while i < len(self.lessons) and j < len(self.quizzes):
-            if self.lessons[i].order_in_section is None or self.lessons[i].order_in_section < self.quizzes[j].order_in_section:
+            if (self.lessons[i].order_in_section is None
+                    or self.lessons[i].order_in_section < self.quizzes[j].order_in_section):
                 contents.append({
                     "lesson": LessonInSectionResponse.model_validate(self.lessons[i]),
                 })
@@ -150,6 +161,17 @@ class SectionResponse(DtoModel):
             })
             j += 1
         return contents
+
+    @computed_field
+    @property
+    def duration(self) -> int:
+        if self.lessons is None:
+            return 0
+        d = 0
+        for lesson in self.lessons:
+            if lesson.duration is not None:
+                d += lesson.duration
+        return d
 
 
 class CourseCreate(DtoModel):
@@ -247,12 +269,32 @@ class CourseResponse(DtoModel):
     requirements: list[str] | str | None = None
     what_you_will_learn: list[str] | str | None = None
     rating: float | None = None
-    students: int | None = None
-    duration: int | None = None
-    lessons: int | None = None
     last_updated: datetime | None = None
 
     contents: list[SectionResponse] | None = None
+    instructor: UserResponse | None = None
+    students: list[UserResponse] | None = None
+
+    @computed_field
+    @property
+    def duration(self) -> int:
+        if self.contents is None:
+            return 0
+        d = 0
+        for content in self.contents:
+            d += content.duration
+        return d
+
+    @computed_field
+    @property
+    def lessons(self) -> int:
+        if self.contents is None:
+            return 0
+        d = 0
+        for content in self.contents:
+            if content.section_contents is not None:
+                d += len(content.section_contents)
+        return d
 
     @field_validator("description")
     def validate_description(cls, v):
@@ -278,4 +320,3 @@ class CourseResponse(DtoModel):
     @field_validator("categories")
     def validate_categories(cls, v: list[Category]):
         return [category.name for category in v]
-
