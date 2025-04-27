@@ -33,9 +33,9 @@ def upgrade() -> None:
     op.create_index(op.f('ix_usercourselink_course_id'), 'usercourselink', ['course_id'], unique=False)
     op.create_index(op.f('ix_usercourselink_user_id'), 'usercourselink', ['user_id'], unique=False)
     op.add_column('course', sa.Column('instructor_id', sa.Uuid(), nullable=True,))
-    # op.drop_index('ix_course_duration', table_name='course')
-    # op.drop_index('ix_course_lessons', table_name='course')
-    # op.drop_index('ix_course_students', table_name='course')
+    op.drop_index('ix_course_duration', table_name='course')
+    op.drop_index('ix_course_lessons', table_name='course')
+    op.drop_index('ix_course_students', table_name='course')
     op.create_index(op.f('ix_course_instructor_id'), 'course', ['instructor_id'], unique=False)
     with op.batch_alter_table('course', schema=None) as batch_op:
         batch_op.create_foreign_key('course', 'user', ['instructor_id'], ['id'])
