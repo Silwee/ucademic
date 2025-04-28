@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import date
 from typing import Literal
@@ -18,7 +19,7 @@ class UserUpdateProfile(DtoModel):
                               description="Phone number must be between 10 and 15 digits")
     date_of_birth: date | str
     gender: Literal['Male', "Female"] = Field()
-    bio: str | None = None
+    bio: dict | str | None = None
 
     @field_validator("date_of_birth")
     def date_of_birth_validator(cls, v):
@@ -30,6 +31,15 @@ class UserUpdateProfile(DtoModel):
                 raise ValueError("Date of birth must be in the past")
         return v.__str__()
 
+    @field_validator("bio")
+    def validate_bio(cls, v):
+        """Dump the bio as a string in database"""
+        if v is None:
+            return v
+        if isinstance(v, dict):
+            return json.dumps(v)
+        raise TypeError("Bio must be in JSON")
+
 
 class UserResponse(DtoModel):
     id: uuid.UUID
@@ -38,7 +48,7 @@ class UserResponse(DtoModel):
     phone_number: str | None = None
     date_of_birth: date | None = None
     gender: str | None = None
-    bio: str | None = None
+    bio: dict | str | None = None
     avatar: str | None = None
 
     is_instructor: bool | None = None
@@ -47,4 +57,11 @@ class UserResponse(DtoModel):
     def date_of_birth_validator(cls, v):
         if v is not None and isinstance(v, str):
             return date.fromisoformat(v)
+        return v
+
+    @field_validator("bio")
+    def validate_bio(cls, v):
+        """Load the bio back to JSON (as a dict) if not null"""
+        if v is not None:
+            return json.loads(v)
         return v

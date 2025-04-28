@@ -95,6 +95,22 @@ async def get_my_courses(
                                    dto=CourseResponse))
 
 
+@courses_router.get("/attending_courses", response_model=Page[CourseResponse])
+async def get_attending_courses(
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> Page[CourseResponse]:
+    courses = get_data_in_db(session, Course,
+                             mode='all',
+                             dto=CourseResponse)
+    c = []
+    for course in courses:
+        for student in course.students:
+            if student.id == current_user.id:
+                c.append(course)
+    return paginate(c)
+
+
 @courses_router.get("/{course_id}", response_model=CourseResponse)
 async def get_course(
         course_id: UUID,
