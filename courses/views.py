@@ -52,7 +52,6 @@ async def search_courses(
         rating: float | None = None,
         duration: Literal['extraShort', 'short', 'medium', 'long', 'extraLong'] | None = None
 ) -> Page[CourseResponse]:
-
     query = select(Course)
     if keyword is not None:
         query = query.where(col(Course.title).contains(keyword))
@@ -82,6 +81,17 @@ async def search_courses(
     return paginate(get_data_in_db(session, Course,
                                    mode='query_all',
                                    query=query,
+                                   dto=CourseResponse))
+
+
+@courses_router.get("/my_courses", response_model=Page[CourseResponse])
+async def get_my_courses(
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> Page[CourseResponse]:
+    return paginate(get_data_in_db(session, Course,
+                                   mode='query_all',
+                                   query=select(Course).where(Course.instructor == current_user),
                                    dto=CourseResponse))
 
 
