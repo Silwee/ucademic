@@ -31,7 +31,8 @@ async def register_course(
     course = get_data_in_db(session, Course,
                             obj_id=course_id,
                             check_not_found=True)
-    course.students.append(current_user)
+    if course.students.count(current_user) == 0:
+        course.students.append(current_user)
     return save_data_to_db(session, course, dto=CourseResponse)
 
 
