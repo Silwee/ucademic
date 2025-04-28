@@ -106,11 +106,26 @@ class QuizResponse(DtoModel):
     order_in_section: int | None = None
     questions: list[QuizQuestionDto] | None = None
 
+    @computed_field
+    @property
+    def duration(self) -> int:
+        if self.questions is None:
+            return 0
+        return len(self.questions)
+
 
 class QuizInSectionResponse(DtoModel):
     id: uuid.UUID
     title: str
     order_in_section: int | None = None
+    questions: list[QuizQuestionDto] | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def duration(self) -> int:
+        if self.questions is None:
+            return 0
+        return len(self.questions)
 
 
 class SectionCreate(DtoModel):
