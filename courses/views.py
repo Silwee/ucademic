@@ -3,6 +3,7 @@ from uuid import UUID
 
 import av
 from fastapi import APIRouter, Depends, UploadFile, HTTPException, status, BackgroundTasks
+from fastapi.responses import PlainTextResponse
 from fastapi_pagination import Page, paginate
 from sqlmodel import select, col, Session
 
@@ -296,6 +297,17 @@ async def add_lesson(
     return save_data_to_db(session, lesson, dto=LessonResponse)
 
 
+# @courses_router.put("lesson/{lesson_id}",
+#                     responses={
+#                         200: {"model": LessonResponse},
+#                         404: {"description": "Course/Section not found."},
+#                     })
+# async def update_lesson(
+#         lesson_id: UUID,
+#         lesson_create: LessonCreate,
+# )
+
+
 @courses_router.post("/lesson/{lesson_id}/video",
                      responses={
                          200: {"model": LessonResponse},
@@ -419,6 +431,57 @@ async def add_quiz(
                               obj_id=quiz_id,
                               dto=QuizResponse,
                               check_not_found=True)
+
+
+@courses_router.put("quiz/{quiz_id}",
+                    responses={
+                        200: {"model": QuizResponse},
+                        404: {"description": "Quiz not found."},
+                    })
+async def update_quiz(
+        quiz_id: UUID,
+        quiz_update: QuizCreate,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    quiz = get_data_in_db(session, Quiz,
+                          obj_id=quiz_id,
+                          check_not_found=True)
+    if quiz.section_quiz.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    quiz.sqlmodel_update(quiz_update.model_dump(exclude_unset=True))
+    for question in quiz.questions:
+        session.delete(question)
+    for question in quiz_update:
+        question = QuizQuestion.model_validate(question, update={"quiz_id": quiz_id})
+        session.add(question)
+    return save_data_to_db(session, quiz, dto=QuizResponse)
+
+
+@courses_router.delete("/quiz/{quiz_id}",
+                       responses={
+                           200: {},
+                           404: {"description": "Quiz not found."},
+                       })
+async def delete_quiz(
+        quiz_id: UUID,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> PlainTextResponse:
+    quiz = get_data_in_db(session, Quiz,
+                          obj_id=quiz_id,
+                          check_not_found=True)
+    if quiz.section_quiz.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    session.delete(quiz)
+    session.commit()
+    return PlainTextResponse("Successfully deleted quiz")
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])
