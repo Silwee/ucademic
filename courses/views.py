@@ -226,6 +226,29 @@ async def update_course(
     return save_data_to_db(session, course, dto=CourseResponse)
 
 
+@courses_router.delete(path="/{course_id}",
+                       responses={
+                           200: {},
+                           404: {"description": "Course not found."},
+                       })
+async def delete_course(
+        course_id: UUID,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> PlainTextResponse:
+    course = get_data_in_db(session, Course,
+                            obj_id=course_id,
+                            check_not_found=True)
+    if current_user.id != course.instructor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    session.delete(course)
+    session.commit()
+    return PlainTextResponse("Course deleted successfully.")
+
+
 @courses_router.get("/section/{section_id}", response_model=SectionResponse)
 async def get_section(section_id: UUID, session: Annotated[Session, Depends(get_session)]):
     return get_data_in_db(session, Section,
@@ -258,6 +281,45 @@ async def add_section(
 
     section = Section.model_validate(section_create, update={"course_section": course})
     return save_data_to_db(session, section, dto=SectionResponse)
+
+
+@courses_router.put("/section/{section_id}",
+                    responses={
+                        200: {"model": SectionResponse},
+                        404: {"description": "Section not found."},
+                    })
+async def update_section(
+        section_id: UUID,
+        section_create: SectionCreate,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    section = get_data_in_db(session, Section,
+                             obj_id=section_id,
+                             check_not_found=True)
+    if section.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    section = section.sqlmodel_update(section_create.model_dump(exclude_unset=True))
+    return save_data_to_db(session, section, dto=SectionResponse)
+
+
+@courses_router.delete("/section/{section_id}",
+                       responses={
+                           200: {},
+                           404: {"description": "Section not found."},
+                       })
+async def delete_section(
+        section_id: UUID,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> PlainTextResponse:
+
+    session.delete(section)
+    session.commit()
+    return PlainTextResponse("Section deleted successfully.")
 
 
 @courses_router.get("/lesson/{lesson_id}", response_model=LessonResponse)
@@ -297,15 +359,50 @@ async def add_lesson(
     return save_data_to_db(session, lesson, dto=LessonResponse)
 
 
-# @courses_router.put("lesson/{lesson_id}",
-#                     responses={
-#                         200: {"model": LessonResponse},
-#                         404: {"description": "Course/Section not found."},
-#                     })
-# async def update_lesson(
-#         lesson_id: UUID,
-#         lesson_create: LessonCreate,
-# )
+@courses_router.put("lesson/{lesson_id}",
+                    responses={
+                        200: {"model": LessonResponse},
+                        404: {"description": "Lesson not found."},
+                    })
+async def update_lesson(
+        lesson_id: UUID,
+        lesson_create: LessonCreate,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+):
+    lesson = get_data_in_db(session, Lesson,
+                            obj_id=lesson_id,
+                            check_not_found=True)
+    if lesson.section_lesson.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    lesson.sqlmodel_update(lesson_create.model_dump(exclude_unset=True))
+    return save_data_to_db(session, lesson, dto=LessonResponse)
+
+
+@courses_router.delete("/lesson/{lesson_id}",
+                       responses={
+                           200: {},
+                           404: {"description": "Lesson not found."},
+                       })
+async def delete_lesson(
+        lesson_id: UUID,
+        current_user: Annotated[User, Depends(get_current_user)],
+        session: Annotated[Session, Depends(get_session)]
+) -> PlainTextResponse:
+    lesson = get_data_in_db(session, Lesson,
+                            obj_id=lesson_id,
+                            check_not_found=True)
+    if lesson.section_lesson.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
+    session.delete(lesson)
+    session.commit()
+    return PlainTextResponse("Lesson deleted", status_code=status.HTTP_200_OK)
 
 
 @courses_router.post("/lesson/{lesson_id}/video",
