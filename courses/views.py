@@ -559,7 +559,7 @@ async def update_quiz(
     quiz.sqlmodel_update(quiz_update.model_dump(exclude_unset=True))
     for question in quiz.questions:
         session.delete(question)
-    for question in quiz_update:
+    for question in quiz_update.questions:
         question = QuizQuestion.model_validate(question, update={"quiz_id": quiz_id})
         session.add(question)
     return save_data_to_db(session, quiz, dto=QuizResponse)
@@ -586,6 +586,17 @@ async def delete_quiz(
     session.delete(quiz)
     session.commit()
     return PlainTextResponse("Successfully deleted quiz")
+
+
+# @courses_router.post("/quiz/{quiz_id}/done",
+#                      responses={
+#                          200: {"model": QuizResponse},
+#                          404: {"description": "Quiz not found."},
+#                      })
+# async def done_quiz(
+#         quiz_id: UUID,
+#         current_user: Annotated[User, Depends(get_current_user)],
+# )
 
 
 @courses_router.get("/category/all", response_model=list[CategoryResponse])
