@@ -316,7 +316,14 @@ async def delete_section(
         current_user: Annotated[User, Depends(get_current_user)],
         session: Annotated[Session, Depends(get_session)]
 ) -> PlainTextResponse:
-
+    section = get_data_in_db(session, Section,
+                             obj_id=section_id,
+                             check_not_found=True)
+    if section.course_section.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update course",
+        )
     session.delete(section)
     session.commit()
     return PlainTextResponse("Section deleted successfully.")
@@ -359,7 +366,7 @@ async def add_lesson(
     return save_data_to_db(session, lesson, dto=LessonResponse)
 
 
-@courses_router.put("lesson/{lesson_id}",
+@courses_router.put("/lesson/{lesson_id}",
                     responses={
                         200: {"model": LessonResponse},
                         404: {"description": "Lesson not found."},
@@ -530,7 +537,7 @@ async def add_quiz(
                               check_not_found=True)
 
 
-@courses_router.put("quiz/{quiz_id}",
+@courses_router.put("/quiz/{quiz_id}",
                     responses={
                         200: {"model": QuizResponse},
                         404: {"description": "Quiz not found."},
