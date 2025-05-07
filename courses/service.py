@@ -127,7 +127,7 @@ def transcode_video(lesson_id: uuid.UUID, path: str, duration_seconds: int):
                         "Type": "HLS_GROUP_SETTINGS",
                         "HlsGroupSettings": {
                             "SegmentLength": 10,
-                            "Destination": "s3://ucademic-images-videos-s3/",
+                            "Destination": "s3://ucademic-images-videos-s3" + path + "hls",
                             "MinSegmentLength": 0
                         }
                     }
