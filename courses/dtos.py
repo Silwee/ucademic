@@ -67,7 +67,7 @@ class LessonInSectionResponse(DtoModel):
     order_in_section: int | None = None
     duration: int | None = None
     free_preview: bool
-
+    type: str = 'lesson'
     resources: list[LessonResourceDto] | None = None
 
 
